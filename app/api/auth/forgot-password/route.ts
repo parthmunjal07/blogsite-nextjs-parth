@@ -16,14 +16,12 @@ export async function POST(req: Request) {
     });
 
     if (!user) {
-      // Return success even if user not found to prevent email enumeration
       return NextResponse.json({ message: "If an account with that email exists, we have sent a password reset link." }, { status: 200 });
     }
 
     const token = uuidv4();
     const expires = new Date(Date.now() + 1000 * 60 * 60); // 1 hour
 
-    // Delete any existing reset tokens for this email
     await prisma.verificationToken.deleteMany({
       where: { identifier: email },
     });

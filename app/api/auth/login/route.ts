@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 import { cookies } from "next/headers";
 
 dotenv.config()
-const JWT_SECRET = process.env.JWT_SECRET || "default_secret_key";
+const JWT_SECRET = process.env.JWT_SECRET
 const encodedSecret = new TextEncoder().encode(JWT_SECRET);
 
 export default async function handler(req: NextRequest, res: NextResponse) {
