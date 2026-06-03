@@ -1,5 +1,5 @@
 import "dotenv/config"
-import { Role } from '@prisma/client'
+import { Role } from '../lib/rbac'
 import bcrypt from 'bcryptjs'
 import { prisma } from '../lib/prisma'
 
@@ -25,7 +25,7 @@ async function main() {
       emailVerified: new Date(),
       passwordHash: hashedPassword,
       bio: 'I rule this blog.',
-      role: Role.SUPER_ADMIN,
+      role: 'SUPER_ADMIN',
     },
   })
 
@@ -36,7 +36,7 @@ async function main() {
       emailVerified: new Date(),
       passwordHash: hashedPassword,
       bio: 'Writing awesome posts.',
-      role: Role.BLOG_CREATOR,
+      role: 'BLOG_CREATOR',
     },
   })
 
@@ -47,7 +47,7 @@ async function main() {
       emailVerified: new Date(),
       passwordHash: hashedPassword,
       bio: 'Just here to read and comment.',
-      role: Role.PUBLIC_VIEWER,
+      role: 'PUBLIC_VIEWER',
     },
   })
 

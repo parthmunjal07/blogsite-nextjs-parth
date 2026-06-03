@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Role } from "@prisma/client";
+import { Role } from "@/lib/rbac";
 
 type User = {
   id: string;

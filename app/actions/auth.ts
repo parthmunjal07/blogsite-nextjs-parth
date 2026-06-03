@@ -3,11 +3,11 @@
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { Role } from "@prisma/client";
+import { Role } from "@/lib/rbac";
 import { z } from "zod";
 
 const updateRoleSchema = z.object({
-  newRole: z.nativeEnum(Role),
+  newRole: z.enum(["SUPER_ADMIN", "BLOG_CREATOR", "PUBLIC_VIEWER"]),
 });
 
 export async function updateUserRole(userId: string, newRole: string) {
