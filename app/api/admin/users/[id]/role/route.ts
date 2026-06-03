@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
-import { Role } from "@prisma/client";
 
 import { z } from "zod";
 
@@ -10,7 +9,7 @@ type Context = {
 };
 
 const roleSchema = z.object({
-  role: z.nativeEnum(Role),
+  role: z.enum(["SUPER_ADMIN", "BLOG_CREATOR", "PUBLIC_VIEWER"]),
 });
 
 export async function PATCH(req: NextRequest, { params }: Context) {
