@@ -54,7 +54,7 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
   const session = await auth();
   const isOwner = session?.user?.id === user.id;
 
-  let draftPosts = [];
+  let draftPosts: any[] = [];
   let draftCount = 0;
 
   if (isOwner) {

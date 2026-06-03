@@ -2,6 +2,13 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import rateLimit from "@/lib/rate-limit";
+import { getRealIp } from "@/lib/utils";
+
+const likesLimiter = rateLimit({
+  interval: 60 * 1000, // 1 minute
+  uniqueTokenPerInterval: 1000,
+});
 
 type Context = {
   params: Promise<{ id: string }>;
@@ -13,7 +20,7 @@ export async function GET(req: NextRequest, { params }: Context) {
     const session = await auth();
     const user = session?.user;
     
-    const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || req.ip || "unknown-ip";
+    const ip = getRealIp(req);
     const userAgent = req.headers.get("user-agent") || "unknown-ua";
     const fingerprintString = `${ip}-${userAgent}`;
     const fingerprint = crypto.createHash('sha256').update(fingerprintString).digest('hex');
@@ -43,7 +50,14 @@ export async function POST(req: NextRequest, { params }: Context) {
     const user = session?.user;
     
     // Extract IP and User-Agent for fingerprinting
-    const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || req.ip || "unknown-ip";
+    const ip = getRealIp(req);
+    
+    try {
+      await likesLimiter.check(60, ip); // 60 likes per minute per IP
+    } catch {
+      return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+    }
+
     const userAgent = req.headers.get("user-agent") || "unknown-ua";
     const fingerprintString = `${ip}-${userAgent}`;
     const fingerprint = crypto.createHash('sha256').update(fingerprintString).digest('hex');

@@ -1,5 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import rateLimit from "@/lib/rate-limit";
+import { getRealIp } from "@/lib/utils";
+
+const viewLimiter = rateLimit({
+  interval: 60 * 1000, // 1 minute
+  uniqueTokenPerInterval: 1000,
+});
 
 type Context = {
   params: Promise<{ id: string }>;
@@ -9,8 +16,13 @@ export async function POST(req: NextRequest, { params }: Context) {
   try {
     const { id } = await params;
     
-    const forwardedFor = req.headers.get("x-forwarded-for");
-    const ipFingerprint = forwardedFor ? forwardedFor.split(",")[0] : req.headers.get("x-real-ip") || "unknown-ip";
+    const ipFingerprint = getRealIp(req);
+
+    try {
+      await viewLimiter.check(60, ipFingerprint); // 60 views per minute per IP
+    } catch {
+      return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+    }
 
     const post = await prisma.post.findUnique({ where: { id } });
     if (!post) {

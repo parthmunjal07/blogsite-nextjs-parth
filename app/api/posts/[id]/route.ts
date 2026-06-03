@@ -1,13 +1,7 @@
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import dotenv from "dotenv";
 import { NextRequest, NextResponse } from "next/server";
 import { postSchema } from "@/lib/validations";
-
-dotenv.config();
-
-const JWT_SECRET = process.env.JWT_SECRET;
-const encodedSecret = new TextEncoder().encode(JWT_SECRET);
 
 type Context = {
   params: Promise<{ id: string }>;
@@ -77,7 +71,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
       );
     }
 
-    const { title, slug, content, excerpt, published, categoryId } = validation.data;
+    const { title, slug, content, excerpt, published, categoryId, coverImage } = validation.data;
 
     const updatedPost = await prisma.post.update({
       where: { id },
@@ -86,6 +80,7 @@ export async function PUT(req: NextRequest, { params }: Context) {
         ...(slug && { slug }),
         ...(content && { content }),
         ...(excerpt !== undefined && { excerpt }),
+        ...(coverImage !== undefined && { coverImage }),
         ...(published !== undefined && { published }),
         ...(categoryId !== undefined && { categoryId }),
       },

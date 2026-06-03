@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import DOMPurify from "isomorphic-dompurify";
 
 type PostEditorProps = {
   postId?: string;
@@ -76,6 +78,20 @@ function insertLinePrefix(
 
   return newText;
 }
+
+// ─── Toolbar components ──────────────────────────────────────────
+const ToolBtn = ({ icon, action, label, onClick }: { icon: string; action: string; label: string; onClick: (action: string) => void }) => (
+  <button
+    type="button"
+    onClick={() => onClick(action)}
+    className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/8 rounded transition-colors"
+    title={label}
+  >
+    <span className="material-symbols-outlined text-[18px]">{icon}</span>
+  </button>
+);
+
+const Divider = () => <div className="w-px h-4 bg-outline-variant/50 mx-0.5 shrink-0" />;
 
 // ─── Main Component ──────────────────────────────────────────────
 export default function PostEditorForm({ postId, initialData, categories }: PostEditorProps) {
@@ -307,19 +323,6 @@ export default function PostEditorForm({ postId, initialData, categories }: Post
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toolbarAction, title, slug, content, excerpt, categoryId]);
 
-  // ── Toolbar button helper ─────────────────────────────────────
-  const ToolBtn = ({ icon, action, label }: { icon: string; action: string; label: string }) => (
-    <button
-      type="button"
-      onClick={() => toolbarAction(action)}
-      className="p-1.5 text-on-surface-variant hover:text-primary hover:bg-primary/8 rounded transition-colors"
-      title={label}
-    >
-      <span className="material-symbols-outlined text-[18px]">{icon}</span>
-    </button>
-  );
-
-  const Divider = () => <div className="w-px h-4 bg-outline-variant/50 mx-0.5 shrink-0" />;
 
   // ── Render ────────────────────────────────────────────────────
   return (
@@ -425,20 +428,20 @@ export default function PostEditorForm({ postId, initialData, categories }: Post
           {/* Toolbar */}
           <div className="flex items-center justify-between border border-outline-variant/60 rounded-t-lg bg-surface-container-lowest px-1.5 py-1 overflow-x-auto gap-1 shrink-0">
             <div className="flex items-center gap-0.5 shrink-0">
-              <ToolBtn icon="format_bold" action="bold" label="Bold (Ctrl+B)" />
-              <ToolBtn icon="format_italic" action="italic" label="Italic (Ctrl+I)" />
+              <ToolBtn icon="format_bold" action="bold" label="Bold (Ctrl+B)" onClick={toolbarAction} />
+              <ToolBtn icon="format_italic" action="italic" label="Italic (Ctrl+I)" onClick={toolbarAction} />
               <Divider />
-              <ToolBtn icon="title" action="h2" label="Heading 2" />
-              <ToolBtn icon="format_h3" action="h3" label="Heading 3" />
+              <ToolBtn icon="title" action="h2" label="Heading 2" onClick={toolbarAction} />
+              <ToolBtn icon="format_h3" action="h3" label="Heading 3" onClick={toolbarAction} />
               <Divider />
-              <ToolBtn icon="link" action="link" label="Link (Ctrl+K)" />
-              <ToolBtn icon="format_quote" action="quote" label="Blockquote" />
-              <ToolBtn icon="code" action="code" label="Inline code" />
-              <ToolBtn icon="data_object" action="codeblock" label="Code block" />
+              <ToolBtn icon="link" action="link" label="Link (Ctrl+K)" onClick={toolbarAction} />
+              <ToolBtn icon="format_quote" action="quote" label="Blockquote" onClick={toolbarAction} />
+              <ToolBtn icon="code" action="code" label="Inline code" onClick={toolbarAction} />
+              <ToolBtn icon="data_object" action="codeblock" label="Code block" onClick={toolbarAction} />
               <Divider />
-              <ToolBtn icon="format_list_bulleted" action="ul" label="Bullet list" />
-              <ToolBtn icon="format_list_numbered" action="ol" label="Numbered list" />
-              <ToolBtn icon="horizontal_rule" action="hr" label="Horizontal rule" />
+              <ToolBtn icon="format_list_bulleted" action="ul" label="Bullet list" onClick={toolbarAction} />
+              <ToolBtn icon="format_list_numbered" action="ol" label="Numbered list" onClick={toolbarAction} />
+              <ToolBtn icon="horizontal_rule" action="hr" label="Horizontal rule" onClick={toolbarAction} />
             </div>
 
             {/* Write / Preview toggle */}
@@ -479,7 +482,12 @@ export default function PostEditorForm({ postId, initialData, categories }: Post
             ) : (
               <div className="p-4 md:p-6 overflow-auto flex-1 prose prose-stone max-w-none text-on-surface">
                 {content ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeRaw as any]}
+                  >
+                    {DOMPurify.sanitize(content, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling'] })}
+                  </ReactMarkdown>
                 ) : (
                   <p className="text-on-surface-variant/40 italic">Nothing to preview yet...</p>
                 )}

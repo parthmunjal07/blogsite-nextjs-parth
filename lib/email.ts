@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key_to_prevent_build_crash");
 
 const domain = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 // If using a custom verified domain, change this to your from address. 

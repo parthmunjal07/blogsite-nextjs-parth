@@ -29,9 +29,18 @@ export async function PUT(req: NextRequest) {
     
     const { username, password } = validation.data; 
 
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { username: true },
+    });
+
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     const updateData: any = {};
 
-    if (username && username !== user.username) {
+    if (username && username !== dbUser.username) {
       const existingUser = await prisma.user.findUnique({ where: { username } });
       if (existingUser) {
         return NextResponse.json({ error: "Username is already taken" }, { status: 400 });

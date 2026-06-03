@@ -3,9 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { Role } from "@prisma/client";
 
+import { z } from "zod";
+
 type Context = {
   params: Promise<{ id: string }>;
 };
+
+const roleSchema = z.object({
+  role: z.nativeEnum(Role),
+});
 
 export async function PATCH(req: NextRequest, { params }: Context) {
   try {
@@ -27,15 +33,18 @@ export async function PATCH(req: NextRequest, { params }: Context) {
       );
     }
 
-    const body = await req.json();
-    const { role } = body;
 
-    if (!role || !Object.values(Role).includes(role)) {
+    const body = await req.json();
+    const validation = roleSchema.safeParse(body);
+
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Invalid role provided." },
+        { error: "Validation failed", errors: validation.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+
+    const { role } = validation.data;
 
     const targetUser = await prisma.user.findUnique({
       where: { id: targetUserId },

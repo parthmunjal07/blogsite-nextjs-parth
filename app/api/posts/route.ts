@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { title, slug, content, excerpt, categoryId, published } = validation.data;
+    const { title, slug, content, excerpt, categoryId, published, coverImage } = validation.data;
 
     const newPost = await prisma.post.create({
       data: {
@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
         slug,
         content,
         excerpt: excerpt || null,
+        coverImage: coverImage || null,
         categoryId: categoryId || null,
         published: published || false,
         authorId: user.id,

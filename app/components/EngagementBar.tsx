@@ -5,33 +5,17 @@ import { useState, useEffect } from "react";
 export default function EngagementBar({ 
   postId, 
   initialLikeCount, 
-  initialViewCount 
+  initialViewCount,
+  initialLiked
 }: { 
   postId: string; 
   initialLikeCount: number; 
   initialViewCount: number;
+  initialLiked: boolean;
 }) {
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [viewCount, setViewCount] = useState(initialViewCount);
-  const [fontSizeIndex, setFontSizeIndex] = useState(1); // 0: small, 1: base, 2: large
-
-  // Sync Initial Like State
-  useEffect(() => {
-    let isMounted = true;
-    const checkLikedState = async () => {
-      try {
-        const res = await fetch(`/api/posts/${postId}/likes`);
-        if (res.ok && isMounted) {
-          const data = await res.json();
-          setLiked(data.liked);
-        }
-      } catch (err) {}
-    };
-    checkLikedState();
-    return () => { isMounted = false; };
-  }, [postId]);
-
   // Track View on Mount
   useEffect(() => {
     let isMounted = true;
@@ -54,25 +38,7 @@ export default function EngagementBar({
     return () => { isMounted = false; };
   }, [postId]);
 
-  // Load Font Size Preference
-  useEffect(() => {
-    const saved = localStorage.getItem("blog-font-size");
-    if (saved) {
-      setFontSizeIndex(parseInt(saved, 10));
-    }
-  }, []);
 
-  // Apply Font Size
-  useEffect(() => {
-    const container = document.getElementById("post-content-container");
-    if (!container) return;
-
-    if (fontSizeIndex === 0) container.style.fontSize = '16px';
-    else if (fontSizeIndex === 1) container.style.fontSize = '18px';
-    else container.style.fontSize = '20px';
-
-    localStorage.setItem("blog-font-size", fontSizeIndex.toString());
-  }, [fontSizeIndex]);
 
   const handleLike = async () => {
     const newLikedState = !liked;
@@ -99,14 +65,7 @@ export default function EngagementBar({
     }
   };
 
-  const adjustFontSize = (direction: number) => {
-    setFontSizeIndex(prev => {
-      const next = prev + direction;
-      if (next < 0) return 0;
-      if (next > 2) return 2;
-      return next;
-    });
-  };
+
 
   return (
     <div className="flex items-center justify-between py-4 mb-gap-section">
@@ -129,14 +88,6 @@ export default function EngagementBar({
           <span className="material-symbols-outlined">visibility</span>
           <span className="font-label-md text-label-md">{viewCount} views</span>
         </div>
-      </div>
-      <div className="flex items-center gap-2 border border-outline-variant rounded p-1 bg-surface">
-        <button aria-label="Decrease font size" className="p-1 text-on-surface-variant hover:text-primary transition-colors" onClick={() => adjustFontSize(-1)}>
-          <span className="material-symbols-outlined text-sm">text_decrease</span>
-        </button>
-        <button aria-label="Increase font size" className="p-1 text-on-surface-variant hover:text-primary transition-colors" onClick={() => adjustFontSize(1)}>
-          <span className="material-symbols-outlined text-sm">text_increase</span>
-        </button>
       </div>
     </div>
   );

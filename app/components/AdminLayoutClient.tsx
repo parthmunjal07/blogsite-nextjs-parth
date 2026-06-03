@@ -37,6 +37,10 @@ export default function AdminLayoutClient({ children, role }: { children: React.
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>article</span>
                   Posts
                 </Link>
+                <Link href="/admin/categories" className={`pl-4 py-2 border-l-2 text-on-surface font-label-md text-label-md transition-colors flex items-center gap-3 ${pathname === '/admin/categories' ? 'border-primary' : 'border-transparent text-on-surface-variant hover:text-primary'}`}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>category</span>
+                  Categories
+                </Link>
               </>
             )}
             <Link href="/admin/profile" className={`pl-4 py-2 border-l-2 text-on-surface font-label-md text-label-md transition-colors flex items-center gap-3 ${pathname === '/admin/profile' ? 'border-primary' : 'border-transparent text-on-surface-variant hover:text-primary'}`}>

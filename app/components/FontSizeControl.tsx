@@ -4,9 +4,20 @@ import { useEffect, useState } from "react";
 
 export default function FontSizeControl() {
   const [fontSizeIndex, setFontSizeIndex] = useState(1);
+  const [mounted, setMounted] = useState(false);
   const fontSizes = ['text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl'];
 
   useEffect(() => {
+    setMounted(true);
+    const saved = localStorage.getItem("blog-font-size");
+    if (saved) {
+      setFontSizeIndex(parseInt(saved, 10));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
     // When the component mounts or index changes, apply the class to the article container
     const container = document.getElementById("post-content-container");
     if (container) {
@@ -15,7 +26,9 @@ export default function FontSizeControl() {
       // Add the new one
       container.classList.add(fontSizes[fontSizeIndex]);
     }
-  }, [fontSizeIndex]);
+    
+    localStorage.setItem("blog-font-size", fontSizeIndex.toString());
+  }, [fontSizeIndex, mounted]);
 
   const decreaseFontSize = () => {
     setFontSizeIndex((prev) => Math.max(0, prev - 1));

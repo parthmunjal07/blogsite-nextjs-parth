@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import Pagination from "@/app/components/Pagination";
 
 export const revalidate = 60; // ISR for blog listing
 
@@ -75,9 +76,9 @@ export default async function BlogPage(props: {
             </p>
             <div className="flex items-center gap-3 mt-1 flex-wrap">
               <div className="w-6 h-6 rounded-full bg-surface-variant border border-outline-variant flex items-center justify-center font-caption text-caption text-on-surface-variant">
-                {post.author.username ? post.author.username.substring(0, 2).toUpperCase() : "U"}
+                {post.author?.username ? post.author.username.substring(0, 2).toUpperCase() : "U"}
               </div>
-              <span className="font-label-md text-label-md text-on-surface">{post.author.username || 'Unknown'}</span>
+              <span className="font-label-md text-label-md text-on-surface">{post.author?.username || 'Unknown'}</span>
               <span className="text-outline-variant text-caption">•</span>
               <time className="font-label-md text-label-md text-on-surface-variant">
                 {post.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -111,31 +112,11 @@ export default async function BlogPage(props: {
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-between items-center mt-gap-section pt-gap-component border-t border-outline-variant">
-          {page > 1 ? (
-            <Link 
-              href={`/blog?page=${page - 1}${categorySlug ? `&category=${categorySlug}` : ''}`}
-              className="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 group"
-            >
-              <span className="material-symbols-outlined text-[16px] group-hover:-translate-x-1 transition-transform" data-icon="arrow_left">arrow_left</span>
-              Previous
-            </Link>
-          ) : (
-            <div /> // Placeholder to push Next to the right
-          )}
-          
-          {page < totalPages && (
-            <Link 
-              href={`/blog?page=${page + 1}${categorySlug ? `&category=${categorySlug}` : ''}`}
-              className="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 group"
-            >
-              Next
-              <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform" data-icon="arrow_right">arrow_right</span>
-            </Link>
-          )}
-        </div>
-      )}
+      <Pagination 
+        currentPage={page} 
+        totalPages={totalPages} 
+        baseUrl={categorySlug ? `/blog?category=${categorySlug}&` : `/blog?`} 
+      />
     </main>
   );
 }

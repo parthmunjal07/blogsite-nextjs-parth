@@ -5,6 +5,7 @@ export const postSchema = z.object({
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
   content: z.string().min(10, "Content must be at least 10 characters long"),
   excerpt: z.string().optional(),
+  coverImage: z.string().url("Must be a valid URL").optional().nullable().or(z.literal("")),
   categoryId: z.string().optional().nullable(),
   published: z.boolean().optional(),
 });

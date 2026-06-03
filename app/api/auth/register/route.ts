@@ -4,9 +4,23 @@ import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import { sendVerificationEmail } from "@/lib/email";
 import { registerSchema } from "@/lib/validations";
+import rateLimit from "@/lib/rate-limit";
+import { getRealIp } from "@/lib/utils";
+
+const limiter = rateLimit({
+  interval: 15 * 60 * 1000, // 15 minutes
+  uniqueTokenPerInterval: 500,
+});
 
 export async function POST(req: Request) {
   try {
+    const ip = getRealIp(req);
+    try {
+      await limiter.check(5, ip); // 5 registrations per 15 minutes
+    } catch {
+      return NextResponse.json({ error: "Rate limit exceeded. Try again later." }, { status: 429 });
+    }
+
     const body = await req.json();
     const validation = registerSchema.safeParse(body);
 

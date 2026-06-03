@@ -7,7 +7,11 @@ import CommentSection from "@/app/components/CommentSection";
 import FontSizeControl from "@/app/components/FontSizeControl";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import DOMPurify from "isomorphic-dompurify";
 import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import crypto from "crypto";
 
 export const revalidate = 30; // ISR
 
@@ -22,14 +26,41 @@ export async function generateStaticParams() {
 export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const params = await props.params;
   const post = await prisma.post.findUnique({ where: { slug: params.slug } });
-  
+
   if (!post) {
     return { title: 'Post Not Found' };
   }
 
+  const description = post.excerpt || post.content.substring(0, 160);
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const url = `${baseUrl}/blog/${post.slug}`;
+  let images: { url: string }[] | undefined = undefined;
+  
+  if (post.coverImage) {
+    const isAbsolute = post.coverImage.startsWith('http');
+    const imageUrl = isAbsolute 
+      ? post.coverImage 
+      : `${baseUrl}${post.coverImage.startsWith('/') ? '' : '/'}${post.coverImage}`;
+      
+    images = [{ url: imageUrl }];
+  }
+
   return {
     title: `${post.title} - Blogify`,
-    description: post.excerpt || post.content.substring(0, 160),
+    description,
+    openGraph: {
+      title: `${post.title} - Blogify`,
+      description,
+      url,
+      type: 'article',
+      images,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${post.title} - Blogify`,
+      description,
+      images,
+    },
   };
 }
 
@@ -50,6 +81,25 @@ export default async function BlogPostPage(props: { params: Promise<{ slug: stri
 
   if (!post) {
     notFound();
+  }
+
+  const headerStore = await headers();
+  const ip = headerStore.get("x-forwarded-for") || headerStore.get("x-real-ip") || "unknown-ip";
+  const userAgent = headerStore.get("user-agent") || "unknown-ua";
+  const fingerprintString = `${ip}-${userAgent}`;
+  const fingerprint = crypto.createHash('sha256').update(fingerprintString).digest('hex');
+
+  let initialLiked = false;
+  if (session?.user?.id) {
+    const existingLike = await prisma.like.findFirst({
+      where: { postId: post.id, userIdFingerprint: session.user.id }
+    });
+    initialLiked = !!existingLike;
+  } else {
+    const existingLike = await prisma.like.findFirst({
+      where: { postId: post.id, fingerprint }
+    });
+    initialLiked = !!existingLike;
   }
 
   // Markdown rendering configuration can be customized via ReactMarkdown components mapping
@@ -75,10 +125,10 @@ export default async function BlogPostPage(props: { params: Promise<{ slug: stri
           <hr className="border-t border-outline-variant w-full" />
           <div className="flex items-center gap-4">
             <div className="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center font-label-md text-label-md text-on-surface">
-              {post.author.username ? post.author.username.substring(0, 2).toUpperCase() : "U"}
+              {post.author?.username?.substring(0, 2).toUpperCase() || "U"}
             </div>
             <div className="flex flex-col">
-              <span className="font-label-md text-label-md text-on-surface">{post.author.username || 'Unknown'}</span>
+              <span className="font-label-md text-label-md text-on-surface">{post.author?.username || 'Unknown'}</span>
               <span className="font-caption text-caption text-on-surface-variant">
                 {post.createdAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • {Math.max(1, Math.ceil(post.content.split(/\s+/).length / 200))} min read
               </span>
@@ -87,18 +137,19 @@ export default async function BlogPostPage(props: { params: Promise<{ slug: stri
         </header>
 
         {/* Article Body */}
-        <article 
-          className="font-body-lg text-body-lg text-on-surface flex flex-col gap-gap-component transition-all duration-200" 
+        <article
+          className="font-body-lg text-body-lg text-on-surface flex flex-col gap-gap-component transition-all duration-200"
           id="post-content-container"
         >
           <ReactMarkdown 
             remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw as any]}
             components={{
-              p: ({node, ...props}) => <p className="font-family-body line-height-reading max-w-[65ch] mx-auto w-full" {...props} />,
-              h1: ({node, ...props}) => <h1 className="font-headline-md text-headline-md mt-6 mb-4 max-w-[65ch] mx-auto w-full" {...props} />,
-              h2: ({node, ...props}) => <h2 className="font-headline-md text-headline-md mt-6 mb-4 max-w-[65ch] mx-auto w-full" {...props} />,
-              blockquote: ({node, ...props}) => <blockquote className="border-l-2 border-primary pl-6 my-4 italic text-on-surface-variant max-w-[65ch] mx-auto w-full" {...props} />,
-              code: ({node, inline, className, children, ...props}: any) => {
+              p: ({ node, ...props }) => <p className="font-family-body line-height-reading max-w-[65ch] mx-auto w-full" {...props} />,
+              h1: ({ node, ...props }) => <h1 className="font-headline-md text-headline-md mt-6 mb-4 max-w-[65ch] mx-auto w-full" {...props} />,
+              h2: ({ node, ...props }) => <h2 className="font-headline-md text-headline-md mt-6 mb-4 max-w-[65ch] mx-auto w-full" {...props} />,
+              blockquote: ({ node, ...props }) => <blockquote className="border-l-2 border-primary pl-6 my-4 italic text-on-surface-variant max-w-[65ch] mx-auto w-full" {...props} />,
+              code: ({ node, inline, className, children, ...props }: any) => {
                 const match = /language-(\w+)/.exec(className || '')
                 return !inline ? (
                   <div className="bg-surface border-l-4 border-primary p-6 my-4 rounded-r-DEFAULT overflow-x-auto text-sm font-mono text-on-surface-variant border border-y-outline-variant border-r-outline-variant max-w-[65ch] mx-auto w-full">
@@ -110,19 +161,19 @@ export default async function BlogPostPage(props: { params: Promise<{ slug: stri
               }
             }}
           >
-            {post.content}
+            {DOMPurify.sanitize(post.content, { ADD_TAGS: ['iframe'], ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling'] })}
           </ReactMarkdown>
         </article>
 
         <hr className="border-t border-outline-variant w-full my-gap-section" />
 
-        <EngagementBar postId={post.id} initialLikeCount={post.likeCount} initialViewCount={post.viewCount} />
+        <EngagementBar postId={post.id} initialLikeCount={post.likeCount} initialViewCount={post.viewCount} initialLiked={initialLiked} />
 
-        <CommentSection 
-          postId={post.id} 
-          comments={post.comments} 
-          isLoggedIn={!!session?.user} 
-          isAdmin={session?.user?.role === 'SUPER_ADMIN'} 
+        <CommentSection
+          postId={post.id}
+          comments={post.comments}
+          isLoggedIn={!!session?.user}
+          isAdmin={session?.user?.role === 'SUPER_ADMIN'}
         />
       </main>
     </>

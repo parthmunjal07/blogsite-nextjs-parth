@@ -2,9 +2,23 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcrypt";
 import { resetPasswordSchema } from "@/lib/validations";
+import rateLimit from "@/lib/rate-limit";
+import { getRealIp } from "@/lib/utils";
+
+const limiter = rateLimit({
+  interval: 15 * 60 * 1000, // 15 minutes
+  uniqueTokenPerInterval: 500,
+});
 
 export async function POST(req: Request) {
   try {
+    const ip = getRealIp(req);
+    try {
+      await limiter.check(5, ip); // 5 attempts per 15 minutes
+    } catch {
+      return NextResponse.json({ error: "Rate limit exceeded. Try again later." }, { status: 429 });
+    }
+
     const body = await req.json();
     const validation = resetPasswordSchema.safeParse(body);
 

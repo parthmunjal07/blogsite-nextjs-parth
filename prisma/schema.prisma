@@ -36,19 +36,23 @@ model Post {
   slug        String   @unique
   content     String   @db.Text
   excerpt     String?
+  coverImage  String?
   published   Boolean  @default(false)
-  authorId    String
+  authorId    String?
   categoryId  String?
   viewCount   Int      @default(0)
   likeCount   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author      User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
   category    Category? @relation(fields: [categoryId], references: [id])
   comments    Comment[]
   likes       Like[]
   views       PostView[]
+
+  @@index([authorId])
+  @@index([categoryId])
 }
 
 model Comment {

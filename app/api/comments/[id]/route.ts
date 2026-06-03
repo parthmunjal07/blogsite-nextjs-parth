@@ -23,7 +23,7 @@ export async function DELETE(req: NextRequest, { params }: Context) {
       return NextResponse.json({ error: "Comment not found" }, { status: 404 });
     }
 
-    const isOwner = existingComment.authorId === user.id;
+    const isOwner = existingComment.userId === user.id;
     const isSuperAdmin = user.role === "SUPER_ADMIN";
 
     if (!isOwner && !isSuperAdmin) {

@@ -5,8 +5,8 @@ import { Role } from "@prisma/client";
 
 type User = {
   id: string;
-  email: string;
-  username: string;
+  email: string | null;
+  username: string | null;
   role: Role;
   createdAt: string | Date;
 };
@@ -68,10 +68,10 @@ export default function UserRoleManager({ initialUsers, currentUserId }: { initi
             {users.map((user) => (
               <tr key={user.id} className="hover:bg-surface-variant/30 transition-colors">
                 <td className="px-6 py-4 font-body-md text-on-surface">
-                  {user.username}
+                  {user.username || "Anonymous"}
                 </td>
                 <td className="px-6 py-4 font-body-md text-on-surface-variant">
-                  {user.email}
+                  {user.email || "No Email"}
                 </td>
                 <td className="px-6 py-4 font-body-md text-on-surface-variant">
                   {new Date(user.createdAt).toLocaleDateString()}

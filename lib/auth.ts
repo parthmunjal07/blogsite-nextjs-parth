@@ -5,6 +5,13 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import { authConfig } from "../auth.config";
+import rateLimit from "./rate-limit";
+import { getRealIp } from "./utils";
+
+const loginLimiter = rateLimit({
+  interval: 15 * 60 * 1000, // 15 minutes
+  uniqueTokenPerInterval: 500,
+});
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -22,7 +29,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
+        if (req) {
+          const ip = getRealIp(req as any);
+          try {
+            await loginLimiter.check(5, ip); // 5 login attempts per 15 mins
+          } catch {
+            throw new Error("Rate limit exceeded. Try again later.");
+          }
+        }
         console.log("Authorize called with email:", credentials?.email);
         
         if (!credentials?.email || !credentials?.password) {
