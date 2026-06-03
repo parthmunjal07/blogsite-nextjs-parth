@@ -5,6 +5,8 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import bcrypt from "bcrypt";
 import { authConfig } from "../auth.config";
+import { jwtVerify } from "jose";
+import { cookies } from "next/headers";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -53,3 +55,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     })
   ]
 });
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const encodedSecret = new TextEncoder().encode(JWT_SECRET);
+
+export async function getAuthenticatedUser() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("auth_session")?.value;
+
+  if (!token) return null;
+
+  try {
+    const verified = await jwtVerify(token, encodedSecret);
+    const payload = verified.payload as { userId: string };
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { id: true, role: true },
+    });
+
+    return user;
+  } catch (err) {
+    return null;
+  }
+}

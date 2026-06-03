@@ -1,3 +1,4 @@
+import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import dotenv from "dotenv";
 import { jwtVerify } from "jose";
@@ -12,27 +13,6 @@ const encodedSecret = new TextEncoder().encode(JWT_SECRET);
 type Context = {
   params: Promise<{ id: string }>;
 };
-
-async function getAuthenticatedUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("auth_session")?.value;
-
-  if (!token) return null;
-
-  try {
-    const verified = await jwtVerify(token, encodedSecret);
-    const payload = verified.payload as { userId: string };
-
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: { id: true, role: true },
-    });
-
-    return user;
-  } catch (err) {
-    return null;
-  }
-}
 
 export async function GET(
   req: NextRequest,
@@ -146,5 +126,8 @@ export async function DELETE(req: NextRequest, { params }: Context) {
       { message: "Post deleted successfully" },
       { status: 200 },
     );
-  } catch (error) {}
+  } catch (error) {
+    console.error("Error deleting post:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
 }
