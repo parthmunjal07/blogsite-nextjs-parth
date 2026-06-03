@@ -4,6 +4,7 @@ import { Metadata } from "next";
 import ProgressBar from "@/app/components/ProgressBar";
 import EngagementBar from "@/app/components/EngagementBar";
 import CommentSection from "@/app/components/CommentSection";
+import FontSizeControl from "@/app/components/FontSizeControl";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { auth } from "@/lib/auth";
@@ -69,6 +70,7 @@ export default async function BlogPostPage(props: { params: Promise<{ slug: stri
             {post.excerpt && (
               <p className="font-body-lg text-body-lg text-on-surface-variant italic">{post.excerpt}</p>
             )}
+            <FontSizeControl />
           </div>
           <hr className="border-t border-outline-variant w-full" />
           <div className="flex items-center gap-4">

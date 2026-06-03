@@ -2,10 +2,26 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
+import { Metadata } from "next";
+
 // SSG with generateStaticParams
 export async function generateStaticParams() {
   const categories = await prisma.category.findMany({ select: { slug: true } });
   return categories.map((cat: any) => ({ slug: cat.slug }));
+}
+
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
+  const category = await prisma.category.findUnique({ where: { slug: params.slug } });
+  
+  if (!category) {
+    return { title: 'Category Not Found' };
+  }
+
+  return {
+    title: `${category.name} Posts - inklog`,
+    description: `Read all posts categorized under ${category.name} on inklog.`,
+  };
 }
 
 export default async function CategoryPage(props: { params: Promise<{ slug: string }> }) {
