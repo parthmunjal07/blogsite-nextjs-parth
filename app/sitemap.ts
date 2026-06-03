@@ -20,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     select: { slug: true },
   });
 
-  const categoryUrls = categories.map((category) => ({
+  const categoryUrls = categories.map((category: any) => ({
     url: `${baseUrl}/blog?category=${category.slug}`,
     lastModified: new Date(),
     changeFrequency: 'weekly' as const,
