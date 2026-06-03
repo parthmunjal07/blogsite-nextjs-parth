@@ -22,7 +22,7 @@ export default function RegisterPage() {
   return (
     <div className="w-full max-w-[400px] bg-white border border-[#E8E6E1] rounded-[6px] p-9 mx-auto">
       <div className="text-center mb-8">
-        <h1 className="font-headline-md text-headline-md text-on-surface mb-2" style={{ fontSize: '20px', fontWeight: 500 }}>inklog</h1>
+        <h1 className="font-headline-md text-headline-md text-on-surface mb-2" style={{ fontSize: '20px', fontWeight: 500 }}>Blogify</h1>
         <h2 className="font-headline-md text-headline-md text-on-surface mb-1" style={{ fontSize: '22px', fontWeight: 400 }}>Create an account</h2>
         <p className="font-body-md text-body-md text-on-surface-variant" style={{ fontSize: '14px' }}>Join us to start writing.</p>
       </div>

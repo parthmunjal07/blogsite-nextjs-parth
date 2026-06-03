@@ -28,7 +28,7 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
   }
 
   return {
-    title: `${post.title} - inklog`,
+    title: `${post.title} - Blogify`,
     description: post.excerpt || post.content.substring(0, 160),
   };
 }

@@ -1,6 +1,7 @@
-import { PrismaClient, Role } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import "dotenv/config"
+import { Role } from '@prisma/client'
+import bcrypt from 'bcryptjs'
+import { prisma } from '../lib/prisma'
 
 async function main() {
   console.log('Clearing database...')
@@ -13,13 +14,16 @@ async function main() {
   await prisma.user.deleteMany()
 
   console.log('Seeding data...')
+  
+  const defaultPassword = 'password123'
+  const hashedPassword = await bcrypt.hash(defaultPassword, 10)
 
   const superAdmin = await prisma.user.create({
     data: {
-      name: 'Super Admin',
       username: 'superadmin',
       email: 'admin@example.com',
-      passwordHash: 'dummy_hash_1',
+      emailVerified: new Date(),
+      passwordHash: hashedPassword,
       bio: 'I rule this blog.',
       role: Role.SUPER_ADMIN,
     },
@@ -27,10 +31,10 @@ async function main() {
 
   const blogCreator = await prisma.user.create({
     data: {
-      name: 'Content Creator',
       username: 'creator1',
       email: 'creator@example.com',
-      passwordHash: 'dummy_hash_2',
+      emailVerified: new Date(),
+      passwordHash: hashedPassword,
       bio: 'Writing awesome posts.',
       role: Role.BLOG_CREATOR,
     },
@@ -38,10 +42,10 @@ async function main() {
 
   const publicViewer = await prisma.user.create({
     data: {
-      name: 'Jane Reader',
       username: 'janereads',
       email: 'jane@example.com',
-      passwordHash: 'dummy_hash_3',
+      emailVerified: new Date(),
+      passwordHash: hashedPassword,
       bio: 'Just here to read and comment.',
       role: Role.PUBLIC_VIEWER,
     },
@@ -92,7 +96,7 @@ async function main() {
   await prisma.comment.create({
     data: {
       content: 'Great post! Very helpful.',
-      name: publicViewer.name,
+      name: publicViewer.username,
       email: publicViewer.email,
       postId: post1.id,
       userId: publicViewer.id,

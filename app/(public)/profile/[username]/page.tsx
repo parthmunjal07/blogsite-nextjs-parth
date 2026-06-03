@@ -24,8 +24,8 @@ export async function generateMetadata(props: { params: Promise<{ username: stri
   }
 
   return {
-    title: `${user.username} - inklog Profile`,
-    description: user.bio || `Read posts by ${user.username} on inklog.`,
+    title: `${user.username} - Blogify Profile`,
+    description: user.bio || `Read posts by ${user.username} on Blogify.`,
   };
 }
 

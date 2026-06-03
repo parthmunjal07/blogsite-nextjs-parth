@@ -18,20 +18,23 @@ export const authConfig = {
     },
     async jwt({ token, user, trigger, session }) {
       if (user) {
-        token.id = user.id as string;
+        token.sub = user.id as string;
         token.role = user.role;
+        console.log("[JWT] Setting token from user:", { sub: token.sub, role: token.role });
       }
       // Useful if you need to update session role dynamically
       if (trigger === "update" && session?.role) {
         token.role = session.role;
       }
+      console.log("[JWT] Returning token:", { sub: token.sub, role: token.role });
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id;
+        session.user.id = token.sub as string;
         session.user.role = token.role;
       }
+      console.log("[SESSION] Returning session:", { id: session?.user?.id, role: session?.user?.role });
       return session;
     }
   },

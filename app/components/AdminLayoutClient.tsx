@@ -22,7 +22,7 @@ export default function AdminLayoutClient({ children, role }: { children: React.
         <div>
           {/* Brand */}
           <div className="font-body-lg text-body-lg text-primary tracking-tight mb-10 font-medium">
-            inklog
+            Blogify
           </div>
 
           {/* Navigation Links */}

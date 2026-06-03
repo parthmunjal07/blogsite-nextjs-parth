@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "inklog",
+  title: "Blogify",
   description: "Writing worth reading.",
 };
 

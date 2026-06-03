@@ -107,7 +107,7 @@ export default async function AdminDashboardPage() {
                 </td>
                 <td className="py-4 px-4 text-on-surface-variant text-right tabular-nums">—</td>
                 <td className="py-4 px-4 text-on-surface-variant text-right tabular-nums">—</td>
-                <td className="py-4 px-4 text-on-surface-variant whitespace-nowrap">Oct 22, 2024</td>
+                <td className="py-4 px-4 text-on-surface-variant whitespace-nowrap">Oct 22, 2026</td>
                 {isCreatorOrAdmin && (
                   <td className="py-4 pl-4 text-right">
                     {canManageResource(role, userId, mockPostOwnerId) && (

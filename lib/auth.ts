@@ -3,10 +3,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { authConfig } from "../auth.config";
-import { jwtVerify } from "jose";
-import { cookies } from "next/headers";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -25,7 +23,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
+        console.log("Authorize called with email:", credentials?.email);
+        
         if (!credentials?.email || !credentials?.password) {
+          console.log("Missing email or password in credentials");
           return null;
         }
 
@@ -33,11 +34,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: credentials.email as string }
         });
 
-        if (!user || !user.passwordHash) {
+        if (!user) {
+          console.log("User not found for email:", credentials.email);
+          return null;
+        }
+        
+        if (!user.passwordHash) {
+          console.log("User has no password hash (OAuth user?)");
           return null;
         }
 
         if (!user.emailVerified) {
+          console.log("User email not verified");
           throw new Error("Please verify your email before logging in.");
         }
 
@@ -47,35 +55,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
 
         if (!isValidPassword) {
+          console.log("Invalid password provided");
           return null;
         }
 
+        console.log("Login successful for user:", user.id);
         return user;
       }
     })
   ]
 });
 
-const JWT_SECRET = process.env.JWT_SECRET;
-const encodedSecret = new TextEncoder().encode(JWT_SECRET);
-
 export async function getAuthenticatedUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("auth_session")?.value;
+  const session = await auth();
 
-  if (!token) return null;
+  if (!session?.user?.id) return null;
 
-  try {
-    const verified = await jwtVerify(token, encodedSecret);
-    const payload = verified.payload as { userId: string };
-
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: { id: true, role: true },
-    });
-
-    return user;
-  } catch (err) {
-    return null;
-  }
+  return {
+    id: session.user.id as string,
+    role: session.user.role as string,
+  };
 }

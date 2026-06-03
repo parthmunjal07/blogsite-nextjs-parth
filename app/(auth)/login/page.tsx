@@ -1,15 +1,64 @@
-import Link from "next/link";
+"use client";
 
-export default function LoginPage() {
+import Link from "next/link";
+import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+
+function LoginContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams?.get("callbackUrl") || "/";
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const res = await signIn("credentials", {
+        redirect: false,
+        email,
+        password,
+        callbackUrl,
+      });
+
+      if (res?.error) {
+        setError(res.error);
+      } else if (res?.url) {
+        router.push(res.url);
+        router.refresh();
+      } else {
+        router.push(callbackUrl);
+        router.refresh();
+      }
+    } catch (err: any) {
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="w-full max-w-[400px] bg-white border border-[#E8E6E1] rounded-[6px] p-9 mx-auto">
       <div className="text-center mb-8">
-        <h1 className="font-headline-md text-headline-md text-on-surface mb-2" style={{ fontSize: '20px', fontWeight: 500 }}>inklog</h1>
+        <h1 className="font-headline-md text-headline-md text-on-surface mb-2" style={{ fontSize: '20px', fontWeight: 500 }}>Blogify</h1>
         <h2 className="font-headline-md text-headline-md text-on-surface mb-1" style={{ fontSize: '22px', fontWeight: 400 }}>Welcome back</h2>
         <p className="font-body-md text-body-md text-on-surface-variant" style={{ fontSize: '14px' }}>Sign in to continue to your account.</p>
       </div>
 
-      <form action="#" className="space-y-6" method="POST">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && (
+          <div className="bg-error/10 text-error p-3 rounded font-body-md text-body-md text-sm">
+            {error}
+          </div>
+        )}
         <div>
           <label className="block font-label-md text-label-md text-on-surface mb-1" htmlFor="email">Email address</label>
           <input 
@@ -19,6 +68,8 @@ export default function LoginPage() {
             name="email" 
             required 
             type="email" 
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
         </div>
         <div>
@@ -34,15 +85,18 @@ export default function LoginPage() {
             id="password" 
             name="password" 
             required 
-            type="password" 
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)} 
           />
         </div>
         <div>
           <button 
-            className="bg-[#8FA96E] text-white h-[38px] rounded-[6px] hover:opacity-90 transition-opacity w-full flex justify-center items-center font-label-md text-label-md font-medium" 
+            className="bg-[#8FA96E] text-white h-[38px] rounded-[6px] hover:opacity-90 transition-opacity w-full flex justify-center items-center font-label-md text-label-md font-medium disabled:opacity-50" 
             type="submit"
+            disabled={isLoading}
           >
-            Sign in
+            {isLoading ? "Signing in..." : "Sign in"}
           </button>
         </div>
       </form>
@@ -58,8 +112,10 @@ export default function LoginPage() {
         </div>
         <div className="mt-6">
           <button 
-            className="bg-white text-[#1c1c1a] border border-[#E8E6E1] h-[38px] rounded-[6px] hover:bg-[#fcf9f5] transition-colors w-full flex justify-center items-center font-label-md text-label-md font-medium" 
+            className="bg-white text-[#1c1c1a] border border-[#E8E6E1] h-[38px] rounded-[6px] hover:bg-[#fcf9f5] transition-colors w-full flex justify-center items-center font-label-md text-label-md font-medium disabled:opacity-50" 
             type="button"
+            onClick={() => signIn("google", { callbackUrl })}
+            disabled={isLoading}
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
@@ -79,5 +135,13 @@ export default function LoginPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center p-8">Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

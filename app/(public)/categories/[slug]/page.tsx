@@ -19,8 +19,8 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
   }
 
   return {
-    title: `${category.name} Posts - inklog`,
-    description: `Read all posts categorized under ${category.name} on inklog.`,
+    title: `${category.name} Posts - Blogify`,
+    description: `Read all posts categorized under ${category.name} on Blogify.`,
   };
 }
 
