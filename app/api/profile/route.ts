@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import bcrypt from 'bcrypt'
+import { z } from "zod";
+
+const apiProfileSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters").optional(),
+  password: z.string().min(8, "Password must be at least 8 characters").optional(),
+});
 
 export async function PUT(req: NextRequest) {
   try {
@@ -12,8 +18,16 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
+    const validation = apiProfileSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", errors: validation.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
     
-    const { username, password } = body; 
+    const { username, password } = validation.data; 
 
     const updateData: any = {};
 

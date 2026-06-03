@@ -1,10 +1,7 @@
 import { prisma } from "@/lib/prisma";
-import { jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { getAuthenticatedUser } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
-
-const JWT_SECRET = process.env.JWT_SECRET;
-const encodedSecret = new TextEncoder().encode(JWT_SECRET);
+import { postSchema } from "@/lib/validations";
 
 export async function GET(req: NextRequest) {
   try {
@@ -67,35 +64,10 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_session")?.value;
-
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    let payload;
-
-    try {
-      const verified = await jwtVerify(token, encodedSecret);
-      payload = verified.payload as { userId: String };
-    } catch (error) {}
-
-    if (!payload) {
-      console.log("No Payload in posts");
-      return NextResponse.json(
-        { error: "Internal Server Error" },
-        { status: 500 },
-      );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      select: { role: true },
-    });
+    const user = await getAuthenticatedUser();
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const allowedRoles = ["BLOG_CREATOR", "SUPER_ADMIN"];
@@ -107,20 +79,26 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { title, content } = body;
+    const validation = postSchema.safeParse(body);
 
-    if (!title || !content) {
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Title and content are required." },
+        { error: "Validation failed", errors: validation.error.flatten().fieldErrors },
         { status: 400 },
       );
     }
 
+    const { title, slug, content, excerpt, categoryId, published } = validation.data;
+
     const newPost = await prisma.post.create({
       data: {
         title,
+        slug,
         content,
-        authorId: payload.userId,
+        excerpt: excerpt || null,
+        categoryId: categoryId || null,
+        published: published || false,
+        authorId: user.id,
       },
     });
 

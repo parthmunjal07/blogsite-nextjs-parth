@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { commentSchema } from "@/lib/validations";
 
 export async function createComment(postId: string, content: string) {
   const session = await auth();
@@ -11,13 +12,20 @@ export async function createComment(postId: string, content: string) {
     throw new Error("Unauthorized: You must be logged in to comment");
   }
 
-  if (!content || !content.trim()) {
-    throw new Error("Comment content cannot be empty");
+  const validation = commentSchema.safeParse({ content });
+
+  if (!validation.success) {
+    return { 
+      success: false, 
+      errors: validation.error.flatten().fieldErrors,
+      error: "Validation failed"
+    };
   }
 
-  const newComment = await prisma.comment.create({
-    data: {
-      content: content.trim(),
+  try {
+    const newComment = await prisma.comment.create({
+      data: {
+        content: validation.data.content,
       postId,
       userId: session.user.id,
       name: session.user.name || null,
@@ -30,11 +38,15 @@ export async function createComment(postId: string, content: string) {
 
   // Revalidate the post page to reflect the new comment count and comment list
   const post = await prisma.post.findUnique({ where: { id: postId }, select: { slug: true }});
-  if (post?.slug) {
-    revalidatePath(`/blog/${post.slug}`);
-  }
+    if (post?.slug) {
+      revalidatePath(`/blog/${post.slug}`);
+    }
 
-  return { success: true, comment: newComment };
+    return { success: true, comment: newComment };
+  } catch (error) {
+    console.error("Database error creating comment:", error);
+    return { success: false, error: "An unexpected error occurred" };
+  }
 }
 
 export async function deleteComment(commentId: string, postId: string) {
@@ -44,30 +56,35 @@ export async function deleteComment(commentId: string, postId: string) {
     throw new Error("Unauthorized");
   }
 
-  const comment = await prisma.comment.findUnique({
-    where: { id: commentId },
-    include: { post: true }
-  });
+  try {
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+      include: { post: true }
+    });
 
-  if (!comment) {
-    throw new Error("Comment not found");
+    if (!comment) {
+      return { success: false, error: "Comment not found" };
+    }
+
+    const isCommentOwner = comment.userId === session.user.id;
+    const isPostOwner = comment.post.authorId === session.user.id;
+    const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+
+    if (!isCommentOwner && !isPostOwner && !isSuperAdmin) {
+      return { success: false, error: "Forbidden: You don't have permission to delete this comment" };
+    }
+
+    await prisma.comment.delete({
+      where: { id: commentId }
+    });
+
+    if (comment.post.slug) {
+      revalidatePath(`/blog/${comment.post.slug}`);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Database error deleting comment:", error);
+    return { success: false, error: "An unexpected error occurred" };
   }
-
-  const isCommentOwner = comment.userId === session.user.id;
-  const isPostOwner = comment.post.authorId === session.user.id;
-  const isSuperAdmin = session.user.role === "SUPER_ADMIN";
-
-  if (!isCommentOwner && !isPostOwner && !isSuperAdmin) {
-    throw new Error("Forbidden: You don't have permission to delete this comment");
-  }
-
-  await prisma.comment.delete({
-    where: { id: commentId }
-  });
-
-  if (comment.post.slug) {
-    revalidatePath(`/blog/${comment.post.slug}`);
-  }
-
-  return { success: true };
 }

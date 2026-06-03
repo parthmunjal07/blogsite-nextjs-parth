@@ -2,14 +2,21 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { sendPasswordResetEmail } from "@/lib/email";
+import { resetSchema } from "@/lib/validations";
 
 export async function POST(req: Request) {
   try {
-    const { email } = await req.json();
+    const body = await req.json();
+    const validation = resetSchema.safeParse(body);
 
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", errors: validation.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+
+    const { email } = validation.data;
 
     const user = await prisma.user.findUnique({
       where: { email },

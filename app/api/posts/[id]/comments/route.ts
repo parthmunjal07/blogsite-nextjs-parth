@@ -1,6 +1,7 @@
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { commentSchema } from "@/lib/validations";
 
 type Context = {
   params: Promise<{ id: string }>;
@@ -19,11 +20,11 @@ export async function GET(req: NextRequest, { params }: Context) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    const comments = prisma.comments.findMany({
+    const comments = await prisma.comment.findMany({
       where: { postId },
       orderBy: { createdAt: "desc" },
       include: {
-        author: {
+        user: {
           select: { id: true, username: true, email: true, role: true },
         },
       },
@@ -58,20 +59,24 @@ export async function POST(req: NextRequest, { params }: Context) {
     }
 
     const body = await req.json();
-    const { content } = body;
+    const validation = commentSchema.safeParse(body);
 
-    if (!content || content.trim() === "") {
-      return NextResponse.json({ error: "Comment content cannot be empty." }, { status: 400 });
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", errors: validation.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+    const { content } = validation.data;
 
     const newComment = await prisma.comment.create({
       data: {
         content: content.trim(),
         postId: postId,
-        authorId: user.id,
+        userId: user.id,
       },
       include: {
-        author: {
+        user: {
            select: { id: true, username: true, role: true }
         }
       }

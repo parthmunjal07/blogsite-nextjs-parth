@@ -1,9 +1,8 @@
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import dotenv from "dotenv";
-import { jwtVerify } from "jose";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { postSchema } from "@/lib/validations";
 
 dotenv.config();
 
@@ -69,7 +68,16 @@ export async function PUT(req: NextRequest, { params }: Context) {
     }
 
     const body = await req.json();
-    const { title, slug, content, excerpt, published, categoryId } = body;
+    const validation = postSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", errors: validation.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const { title, slug, content, excerpt, published, categoryId } = validation.data;
 
     const updatedPost = await prisma.post.update({
       where: { id },

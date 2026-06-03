@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { profileSchema } from "@/lib/validations";
 
 export async function updateProfile(prevState: any, formData: FormData) {
   const session = await auth();
@@ -11,13 +12,21 @@ export async function updateProfile(prevState: any, formData: FormData) {
     return { success: false, error: "Unauthorized. Please log in." };
   }
 
-  const username = formData.get("username") as string;
-  const bio = formData.get("bio") as string;
-  const avatarUrl = formData.get("avatarUrl") as string;
+  const validation = profileSchema.safeParse({
+    username: formData.get("username"),
+    bio: formData.get("bio"),
+    avatarUrl: formData.get("avatarUrl"),
+  });
 
-  if (!username || username.trim().length < 3) {
-    return { success: false, error: "Username must be at least 3 characters long." };
+  if (!validation.success) {
+    return { 
+      success: false, 
+      errors: validation.error.flatten().fieldErrors,
+      error: "Validation failed. Please check the fields."
+    };
   }
+
+  const { username, bio, avatarUrl } = validation.data;
 
   try {
     // Check if username is taken by someone else

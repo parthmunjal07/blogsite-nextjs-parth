@@ -1,6 +1,7 @@
 import { getAuthenticatedUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { categorySchema } from "@/lib/validations";
 
 export async function GET(req: NextRequest) {
     try {
@@ -27,14 +28,16 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, slug } = body;
+    const validation = categorySchema.safeParse(body);
 
-    if (!name || !slug) {
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Category name and slug are required." },
+        { error: "Validation failed", errors: validation.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+
+    const { name, slug } = validation.data;
 
     const existingCategory = await prisma.category.findUnique({
       where: { slug },

@@ -4,18 +4,25 @@ import bcrypt from "bcrypt";
 import { SignJWT } from "jose"
 import dotenv from "dotenv";
 import { cookies } from "next/headers";
+import { loginSchema } from "@/lib/validations";
 
 dotenv.config()
 const JWT_SECRET = process.env.JWT_SECRET
 const encodedSecret = new TextEncoder().encode(JWT_SECRET);
 
-export default async function handler(req: NextRequest, res: NextResponse) {
+export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    const body = await req.json();
+    const validation = loginSchema.safeParse(body);
 
-    if (!email || !password) {
-      return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", errors: validation.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+
+    const { email, password } = validation.data;
 
     const user = await prisma.user.findUnique({
       where: {email: email}
@@ -56,9 +63,10 @@ export default async function handler(req: NextRequest, res: NextResponse) {
       maxAge: 60 * 60 * 24 * 7,
     });
 
-    return { success: true };
+    return NextResponse.json({ success: true }, { status: 200 });
 
   } catch (error) {
-    
+    console.error("Login error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
