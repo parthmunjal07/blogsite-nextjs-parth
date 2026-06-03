@@ -15,9 +15,7 @@ export async function POST(req: NextRequest, { params }: Context) {
     try {
       const body = await req.json();
       fingerprint = body?.fingerprint || null;
-    } catch (e) {
-      // Ignored if body is not JSON or empty
-    }
+    } catch (e) {}
 
     if (!user && !fingerprint) {
       return NextResponse.json({ error: "Unauthorized or fingerprint required" }, { status: 401 });
@@ -41,7 +39,6 @@ export async function POST(req: NextRequest, { params }: Context) {
     }
 
     if (existingLike) {
-      // Unlike
       await prisma.$transaction([
         prisma.like.delete({ where: { id: existingLike.id } }),
         prisma.post.update({
@@ -51,7 +48,6 @@ export async function POST(req: NextRequest, { params }: Context) {
       ]);
       return NextResponse.json({ message: "Unliked", liked: false });
     } else {
-      // Like
       await prisma.$transaction([
         prisma.like.create({
           data: {
