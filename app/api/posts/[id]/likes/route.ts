@@ -1,25 +1,52 @@
-import { getAuthenticatedUser } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 
 type Context = {
   params: Promise<{ id: string }>;
 };
 
+export async function GET(req: NextRequest, { params }: Context) {
+  try {
+    const { id } = await params;
+    const session = await auth();
+    const user = session?.user;
+    
+    const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || req.ip || "unknown-ip";
+    const userAgent = req.headers.get("user-agent") || "unknown-ua";
+    const fingerprintString = `${ip}-${userAgent}`;
+    const fingerprint = crypto.createHash('sha256').update(fingerprintString).digest('hex');
+
+    let existingLike = null;
+
+    if (user) {
+      existingLike = await prisma.like.findFirst({
+        where: { postId: id, userIdFingerprint: user.id }
+      });
+    } else {
+      existingLike = await prisma.like.findFirst({
+        where: { postId: id, fingerprint }
+      });
+    }
+
+    return NextResponse.json({ liked: !!existingLike });
+  } catch (error) {
+    return NextResponse.json({ liked: false });
+  }
+}
+
 export async function POST(req: NextRequest, { params }: Context) {
   try {
     const { id } = await params;
-    const user = await getAuthenticatedUser();
+    const session = await auth();
+    const user = session?.user;
     
-    let fingerprint: string | null = null;
-    try {
-      const body = await req.json();
-      fingerprint = body?.fingerprint || null;
-    } catch (e) {}
-
-    if (!user && !fingerprint) {
-      return NextResponse.json({ error: "Unauthorized or fingerprint required" }, { status: 401 });
-    }
+    // Extract IP and User-Agent for fingerprinting
+    const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || req.ip || "unknown-ip";
+    const userAgent = req.headers.get("user-agent") || "unknown-ua";
+    const fingerprintString = `${ip}-${userAgent}`;
+    const fingerprint = crypto.createHash('sha256').update(fingerprintString).digest('hex');
 
     const post = await prisma.post.findUnique({ where: { id } });
     if (!post) {
@@ -32,11 +59,14 @@ export async function POST(req: NextRequest, { params }: Context) {
       existingLike = await prisma.like.findFirst({
         where: { postId: id, userIdFingerprint: user.id }
       });
-    } else if (fingerprint) {
+    } else {
       existingLike = await prisma.like.findFirst({
         where: { postId: id, fingerprint }
       });
     }
+
+    let currentLikeCount = post.likeCount;
+    let isLiked = false;
 
     if (existingLike) {
       await prisma.$transaction([
@@ -46,7 +76,8 @@ export async function POST(req: NextRequest, { params }: Context) {
           data: { likeCount: { decrement: 1 } }
         })
       ]);
-      return NextResponse.json({ message: "Unliked", liked: false });
+      currentLikeCount -= 1;
+      isLiked = false;
     } else {
       await prisma.$transaction([
         prisma.like.create({
@@ -61,8 +92,11 @@ export async function POST(req: NextRequest, { params }: Context) {
           data: { likeCount: { increment: 1 } }
         })
       ]);
-      return NextResponse.json({ message: "Liked", liked: true });
+      currentLikeCount += 1;
+      isLiked = true;
     }
+
+    return NextResponse.json({ liked: isLiked, likeCount: currentLikeCount });
   } catch (error) {
     console.error("Error toggling like:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

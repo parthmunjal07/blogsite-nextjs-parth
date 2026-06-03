@@ -17,8 +17,16 @@ export async function POST(req: NextRequest, { params }: Context) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
     const existingView = await prisma.postView.findFirst({
-      where: { postId: id, ipFingerprint }
+      where: { 
+        postId: id, 
+        ipFingerprint,
+        createdAt: {
+          gte: yesterday
+        }
+      }
     });
 
     if (!existingView) {

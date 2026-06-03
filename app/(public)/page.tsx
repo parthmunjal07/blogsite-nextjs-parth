@@ -1,6 +1,23 @@
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 
-export default function HomePage() {
+// SSG for Home page. Next.js App Router defaults to SSG unless dynamic functions are used.
+export const revalidate = 3600; // revalidate every hour or keep static
+
+export default async function HomePage() {
+  // Fetch real categories and posts at build time (or during revalidation)
+  const categories = await prisma.category.findMany({
+    take: 4,
+    orderBy: { posts: { _count: 'desc' } }
+  });
+
+  const featuredPosts = await prisma.post.findMany({
+    where: { published: true },
+    take: 3,
+    orderBy: { createdAt: 'desc' },
+    include: { category: true }
+  });
+
   return (
     <main className="flex-grow w-full max-w-container-max mx-auto px-margin-page pt-[120px] pb-gap-section flex flex-col gap-gap-section">
       {/* Hero Section */}
@@ -11,49 +28,46 @@ export default function HomePage() {
 
       {/* Category Links */}
       <section className="flex justify-center gap-6 overflow-x-auto py-2 border-b border-outline-variant">
-        <Link href="/blog?category=design" className="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap pb-2">Design</Link>
-        <Link href="/blog?category=code" className="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap pb-2">Code</Link>
-        <Link href="/blog?category=culture" className="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap pb-2">Culture</Link>
-        <Link href="/blog?category=personal" className="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap pb-2">Personal</Link>
+        {categories.map((cat: any) => (
+          <Link key={cat.id} href={`/categories/${cat.slug}`} className="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap pb-2">
+            {cat.name}
+          </Link>
+        ))}
+        {categories.length === 0 && (
+          <span className="font-label-md text-label-md text-on-surface-variant pb-2">No categories yet.</span>
+        )}
       </section>
 
       {/* Featured Posts */}
       <section className="flex flex-col">
-        {/* Post 1 */}
-        <article className="py-gap-component border-b border-outline-variant flex flex-col gap-2 group cursor-pointer">
-          <div className="flex items-center gap-3 mb-1">
-            <span className="bg-surface-container text-on-surface-variant px-2 py-0.5 rounded-full font-caption text-caption">Design</span>
-            <span className="text-on-surface-variant font-caption text-caption">5 min read</span>
+        {featuredPosts.map((post: any) => (
+          <article key={post.id} className="py-gap-component border-b border-outline-variant flex flex-col gap-2 group cursor-pointer">
+            <div className="flex items-center gap-3 mb-1">
+              {post.category && (
+                <span className="bg-surface-container text-on-surface-variant px-2 py-0.5 rounded-full font-caption text-caption">
+                  {post.category.name}
+                </span>
+              )}
+              {/* Calculating read time roughly based on 200 words per minute */}
+              <span className="text-on-surface-variant font-caption text-caption">
+                {Math.max(1, Math.ceil(post.content.split(/\s+/).length / 200))} min read
+              </span>
+            </div>
+            <Link href={`/blog/${post.slug}`}>
+              <h2 className="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">
+                {post.title}
+              </h2>
+            </Link>
+            <p className="font-body-md text-body-md text-on-surface-variant line-clamp-2">
+              {post.excerpt || post.content.substring(0, 150) + "..."}
+            </p>
+          </article>
+        ))}
+        {featuredPosts.length === 0 && (
+          <div className="py-gap-component text-center text-on-surface-variant">
+            No posts published yet.
           </div>
-          <Link href="/blog/philosophy-of-quiet-interfaces">
-            <h2 className="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">The Philosophy of Quiet Interfaces</h2>
-          </Link>
-          <p className="font-body-md text-body-md text-on-surface-variant line-clamp-2">Exploring how intentional whitespace and muted palettes can reduce cognitive load and create a more focused reading experience in modern digital products.</p>
-        </article>
-
-        {/* Post 2 */}
-        <article className="py-gap-component border-b border-outline-variant flex flex-col gap-2 group cursor-pointer">
-          <div className="flex items-center gap-3 mb-1">
-            <span className="bg-surface-container text-on-surface-variant px-2 py-0.5 rounded-full font-caption text-caption">Culture</span>
-            <span className="text-on-surface-variant font-caption text-caption">8 min read</span>
-          </div>
-          <Link href="/blog/digital-minimalism-2024">
-            <h2 className="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">Digital Minimalism in 2024</h2>
-          </Link>
-          <p className="font-body-md text-body-md text-on-surface-variant line-clamp-2">Why stepping away from algorithmic feeds and returning to curated, long-form content is becoming the new luxury in our hyper-connected world.</p>
-        </article>
-
-        {/* Post 3 */}
-        <article className="py-gap-component border-b border-outline-variant flex flex-col gap-2 group cursor-pointer">
-          <div className="flex items-center gap-3 mb-1">
-            <span className="bg-surface-container text-on-surface-variant px-2 py-0.5 rounded-full font-caption text-caption">Code</span>
-            <span className="text-on-surface-variant font-caption text-caption">4 min read</span>
-          </div>
-          <Link href="/blog/structuring-semantic-html">
-            <h2 className="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors">Structuring Semantic HTML for Readers</h2>
-          </Link>
-          <p className="font-body-md text-body-md text-on-surface-variant line-clamp-2">A technical dive into building web pages that prioritize accessibility and screen readers, ensuring that content remains king across all devices.</p>
-        </article>
+        )}
       </section>
     </main>
   );

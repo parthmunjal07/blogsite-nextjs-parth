@@ -18,7 +18,7 @@ export const authConfig = {
     },
     async jwt({ token, user, trigger, session }) {
       if (user) {
-        token.id = user.id;
+        token.id = user.id as string;
         token.role = user.role;
       }
       // Useful if you need to update session role dynamically

@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 const JWT_SECRET = process.env.JWT_SECRET;
 const encodedSecret = new TextEncoder().encode(JWT_SECRET);
 
-export async function GET(req: NextRequest, res: NextResponse) {
+export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
     
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest, res: NextResponse) {
   }
 }
 
-export async function POST(req: NextRequest, res: NextResponse) {
+export async function POST(req: NextRequest) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("auth_session")?.value;

@@ -16,7 +16,6 @@ type Context = {
 
 export async function GET(
   req: NextRequest,
-  res: NextResponse,
   { params }: Context,
 ) {
   try {
